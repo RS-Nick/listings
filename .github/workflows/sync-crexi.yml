@@ -1,0 +1,48 @@
+name: Sync Crexi Listings
+
+on:
+  schedule:
+    # Run every Monday at 9 AM UTC (1 AM PST / 2 AM PDT)
+    - cron: '0 9 * * 1'
+  workflow_dispatch:  # Allow manual trigger
+  push:
+    branches: [ main ]
+    paths:
+      - 'sync_crexi.py'
+      - '.github/workflows/sync-crexi.yml'
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+    
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.11'
+    
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+    
+    - name: Run Crexi sync
+      env:
+        CREXI_API_KEY: ${{ secrets.CREXI_API_KEY }}
+        SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+        SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
+      run: |
+        python sync_crexi.py
+    
+    - name: Upload logs on failure
+      if: failure()
+      uses: actions/upload-artifact@v4
+      with:
+        name: sync-logs
+        path: |
+          *.log
+          *.json
+        retention-days: 7
